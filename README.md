@@ -1,10 +1,14 @@
 # cmsc408-sp2025-hw8
 
-Homework 8 - World Bank Indicator Analysis
+This project involved an analysis of the World Bank Development Indicators data to look at country information, regional distribution, and income classifications across the world, extracted through SQL queries to identify and present useful insights regarding patterns of global economic development. 
 
-(this is a scaffold.  Please clean it up.)
+## File Structure
+- `reports/report.qmd`: Main analysis document with SQL queries and findings
 
-(Remember, someday you'll look back at this repo and wonder what you were thinking!
-Now is your chance to remind your future self what you were thinking!)
+## Setup and Execution
+1. Create .env file with database credentials
+2. Install required dependencies (Python packages)
+3. Run `quarto render report.qmd` to generate the HTML report
 
-
+## Author
+Mark Jeffrey
