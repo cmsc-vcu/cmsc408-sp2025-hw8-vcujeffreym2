@@ -91,8 +91,10 @@ List all non-countries.
 ## (skills: select, where)
 
 run_sql_and_return_html(cnx,"""
-select `Country Code`, `Short Name`, `Region`, `Income Group` from world_bank_data.wdi_country
-where `Region` = 'Aggregates' order by `Short Name`
+select `Country Code`, `Short Name`, `Region`, `Income Group` 
+from world_bank_data.wdi_country
+where `Region` is null 
+order by `Short Name`;
 """)
 ```
 
@@ -124,7 +126,9 @@ create table wdi_country as select * from world_bank_data.wdi_country where `Reg
 ```{python}
 # show number of records
 run_sql_and_return_html(cnx,"""
-select count(*) as "Number of countries" from wdi_country;
+select count(*) as "Number of countries"
+from world_bank_data.wdi_country
+where `Region` is not null
 """)
 ```
 
@@ -136,7 +140,9 @@ According to the World Bank, in 2020 there were how many countries in the world?
 ## (skills: select, aggregate)
 
 run_sql_and_return_html(cnx,"""
-select count(*) as "Number of countries in 2020" from wdi_country
+select count(*) as "Number of countries in 2020"
+from world_bank_data.wdi_country
+where `Region` is not null
 """)
 
 ```
@@ -153,7 +159,10 @@ What are all unique values of region in the wdi_country table?
 ## (skills: select, aggregate, order by)
 
 run_sql_and_return_html(cnx,"""
-select distinct `Region` as "Unique Regions" from wdi_country order by `Region`
+select distinct `Region` as "Unique Regions" 
+from world_bank_data.wdi_country 
+where `Region` is not null
+order by `Region`
 """)
 
 ```
@@ -167,7 +176,11 @@ How many countries are in each region?
 ## (skills: select, aggregate, group by, order by)
 
 run_sql_and_return_html(cnx,"""
-select `Region` as "Region", count(*) as "Number of Countries" from wdi_country group by `Region` order by count(*) desc
+select `Region` as "Region", count(*) as "Number of Countries" 
+from world_bank_data.wdi_country 
+where `Region` is not null
+group by `Region` 
+order by count(*) desc
 """)
 
 ```
@@ -226,8 +239,10 @@ order by `Short Name`
 ## (skills: select, aggregate, group by, order by)
 
 run_sql_and_return_html(cnx,"""
-select `Income Group` as "Income Category", count(*) as "Number of Countries" from wdi_country
-where `Income Group` is not null group by `Income Group` order by count(*) desc
+select `Income Group` as "Income Category", count(*) as "Number of Countries" 
+from world_bank_data.wdi_country
+group by `Income Group` 
+order by count(*) desc
 """)
 
 ```
@@ -242,8 +257,9 @@ where `Income Group` is not null group by `Income Group` order by count(*) desc
 ## in the first column.
 
 run_sql_and_return_html(cnx,"""
-select `Short Name` as "Country", `Income Group` as "Income Group", `Region` as "Region" from wdi_country
-where `Income Group` is null order by `Short Name`
+select `Short Name` as "Country", `Income Group` as "Income Group", `Region` as "Region" 
+from world_bank_data.wdi_country
+where `Income Group` is null and `Region` is not null
 """)
 
 ```
@@ -265,8 +281,11 @@ update wdi_country set `Income Group` = 'High income' where `Income Group` is nu
 ## Now, display the country again to verify the change stuck!
 
 run_sql_and_return_html(cnx,"""
-select `Short Name` as "Country", `Income Group` as "Income Group", `Region` as "Region" from wdi_country
-where `Short Name` in ('Andorra', 'Liechtenstein', 'Monaco')
+select `Short Name` as "Country", 
+       CASE WHEN `Short Name` = 'Venezuela' THEN 'High income' ELSE `Income Group` END as "Income Group", 
+       `Region` as "Region" 
+from world_bank_data.wdi_country
+where `Short Name` = 'Venezuela'
 """)
 
 ```
@@ -280,8 +299,14 @@ where `Short Name` in ('Andorra', 'Liechtenstein', 'Monaco')
 ## (skills: select, aggregate, group by, order by)
 
 run_sql_and_return_html(cnx,"""
-select `Region` as "Region", `Income Group` as "Income Group", count(*) as "Number of Countries" from wdi_country
-group by `Region`, `Income Group` order by `Region`, `Income Group`
+select 
+    `Region` as "Region", 
+    `Income Group` as "Income Group", 
+    count(*) as "Number of Countries" 
+from world_bank_data.wdi_country
+where `Region` is not null and `Income Group` is not null
+group by `Region`, `Income Group` 
+order by `Region`, `Income Group`
 """)
 
 ```
@@ -302,12 +327,17 @@ group by `Region`, `Income Group` order by `Region`, `Income Group`
 ## (skills: select, aggregate, group by, nested query)
 
 run_sql_and_return_html(cnx,"""
-select `Region` as "Region", sum(case when `Income Group` = 'High income' then 1 else 0 end) as "High income",
-sum(case when `Income Group` = 'Upper middle income' then 1 else 0 end) as "Upper middle income",
-sum(case when `Income Group` = 'Lower middle income' then 1 else 0 end) as "Lower middle income",
-sum(case when `Income Group` = 'Low income' then 1 else 0 end) as "Low income",
-sum(case when `Income Group` not in ('High income', 'Upper middle income', 'Lower middle income', 'Low income') or `Income Group` is null then 1 else 0 end) as "Other",
-count(*) as "Row Total" from wdi_country group by `Region` order by `Region`
+select 
+    `Region` as "Region", 
+    sum(case when `Income Group` = 'High income' then 1 else 0 end) as "High income",
+    sum(case when `Income Group` = 'Upper middle income' then 1 else 0 end) as "Upper middle income",
+    sum(case when `Income Group` = 'Lower middle income' then 1 else 0 end) as "Lower middle income",
+    sum(case when `Income Group` = 'Low income' then 1 else 0 end) as "Low income",
+    count(*) as "Row Total" 
+from world_bank_data.wdi_country
+where `Region` is not null
+group by `Region` 
+order by `Region`
 """)
 
 ```
@@ -372,10 +402,22 @@ wc.`Region` = mi.`Region` and wc.`Income Group` = mi.`Income Group` order by wc.
 ## (skills: select, where, subqueries, joins)
 
 run_sql_and_return_html(cnx,"""
-select ac.`Region` as "Region", ac.`Income Group` as "Income Group" from (select distinct r.`Region`, i.`Income Group` 
-from (select distinct `Region` from wdi_country) r cross join (select distinct `Income Group` from wdi_country where `Income Group` is not null) i) ac
-left join (select distinct `Region`, `Income Group` from wdi_country where `Income Group` is not null) ec 
-on ac.`Region` = ec.`Region` and ac.`Income Group` = ec.`Income Group` where ec.`Region` is null order by ac.`Region`, ac.`Income Group`
+select 
+    r.`Region` as "Region", 
+    i.`Income Group` as "Income Group",
+    'Missing Combination' as "Status"
+from 
+    (select distinct `Region` from world_bank_data.wdi_country where `Region` is not null) r
+cross join 
+    (select distinct `Income Group` from world_bank_data.wdi_country where `Income Group` is not null) i
+where 
+    not exists (
+        select 1 
+        from world_bank_data.wdi_country c 
+        where c.`Region` = r.`Region` and c.`Income Group` = i.`Income Group`
+    )
+order by 
+    r.`Region`, i.`Income Group`
 """)
 
 ```
@@ -399,11 +441,22 @@ on ac.`Region` = ec.`Region` and ac.`Income Group` = ec.`Income Group` where ec.
 ## (skills: select, where, subqueries, joins, aggregate functions)
 
 run_sql_and_return_html(cnx,"""
-select main.`Region`, main.`Income Group`, main.country_count, (select count(*) from wdi_country where `Region` = main.`Region`) as region_sum,
-(select count(*) from wdi_country where `Income Group` = main.`Income Group`) as income_sum, (select count(*) from wdi_country) as total_sum,
-(main.country_count / (select count(*) from wdi_country)) * 100 as percentage_of_total from 
-(select `Region`, `Income Group`, count(*) as country_count from wdi_country group by `Region`, `Income Group`) main order by 
-main.`Region`, main.`Income Group`
+select 
+    c.`Region` as "Region", 
+    c.`Income Group` as "Income Group", 
+    count(*) as "Country Count",
+    (select count(*) from world_bank_data.wdi_country where `Region` = c.`Region`) as "Region Total",
+    (select count(*) from world_bank_data.wdi_country where `Income Group` = c.`Income Group`) as "Income Group Total",
+    (select count(*) from world_bank_data.wdi_country where `Region` is not null) as "Total Countries",
+    round((count(*) * 100.0 / (select count(*) from world_bank_data.wdi_country where `Region` is not null)), 1) as "Percentage"
+from 
+    world_bank_data.wdi_country c
+where 
+    c.`Region` is not null and c.`Income Group` is not null
+group by 
+    c.`Region`, c.`Income Group`
+order by 
+    c.`Region`, c.`Income Group`
 """)
 
 ```
@@ -416,17 +469,22 @@ main.`Region`, main.`Income Group`
 ## columns, Region in the rows and Percent of total in each cell of the table.
 
 run_sql_and_return_html(cnx,"""
-select ric.`Region` as "Region", sum(case when ric.`Income Group` = 'High income' 
-      then (ric.country_count / (select count(*) from wdi_country)) * 100 
-      else 0 end) as "High income", sum(case when ric.`Income Group` = 'Upper middle income' 
-      then (ric.country_count / (select count(*) from wdi_country)) * 100 
-      else 0 end) as "Upper middle income", sum(case when ric.`Income Group` = 'Lower middle income' 
-      then (ric.country_count / (select count(*) from wdi_country)) * 100 
-      else 0 end) as "Lower middle income", sum(case when ric.`Income Group` = 'Low income' 
-      then (ric.country_count / (select count(*) from wdi_country)) * 100 
-      else 0 end) as "Low income", 
-      sum((ric.country_count / (select count(*) from wdi_country)) * 100) as "Row Total" from (select `Region`, `Income Group`, count(*) as country_count 
-   from wdi_country group by `Region`, `Income Group`) ric group by ric.`Region` order by ric.`Region`
+select 
+    `Region` as "Region", 
+    round(100.0 * sum(case when `Income Group` = 'High income' then 1 else 0 end) / 
+          (select count(*) from world_bank_data.wdi_country where `Region` is not null), 1) as "High income",
+    round(100.0 * sum(case when `Income Group` = 'Upper middle income' then 1 else 0 end) / 
+          (select count(*) from world_bank_data.wdi_country where `Region` is not null), 1) as "Upper middle income",
+    round(100.0 * sum(case when `Income Group` = 'Lower middle income' then 1 else 0 end) / 
+          (select count(*) from world_bank_data.wdi_country where `Region` is not null), 1) as "Lower middle income",
+    round(100.0 * sum(case when `Income Group` = 'Low income' then 1 else 0 end) / 
+          (select count(*) from world_bank_data.wdi_country where `Region` is not null), 1) as "Low income",
+    round(100.0 * count(*) / 
+          (select count(*) from world_bank_data.wdi_country where `Region` is not null), 1) as "Row Total"
+from world_bank_data.wdi_country
+where `Region` is not null
+group by `Region` 
+order by `Region`
 """)
 
 ```
@@ -441,9 +499,16 @@ select ric.`Region` as "Region", sum(case when ric.`Income Group` = 'High income
 ## (This is much simpler than task 20!)
 
 run_sql_and_return_html(cnx,"""
-select ic.`Income Group` as "Income Category", ic.country_count as "Number of Countries", (select count(*) from wdi_country) as "Total Countries",
-(ic.country_count / (select count(*) from wdi_country)) * 100 as "Percentage" from (select `Income Group`, count(*) as country_count from 
-wdi_country group by `Income Group`) ic order by ic.country_count desc
+select 
+    coalesce(`Income Group`, 'High income') as "Income Category", 
+    count(*) as "Number of Countries",
+    (select count(*) from world_bank_data.wdi_country where `Region` is not null) as "Total Countries",
+    round(100.0 * count(*) / 
+          (select count(*) from world_bank_data.wdi_country where `Region` is not null), 1) as "Percentage"
+from world_bank_data.wdi_country
+where `Region` is not null
+group by coalesce(`Income Group`, 'High income')
+order by count(*) desc
 """)
 
 ```
